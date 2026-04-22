@@ -39,23 +39,17 @@ class CommentSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         request = self.context['request']
         view = self.context['view']
-        
-
         post_id = view.kwargs.get('post_pk')
-        
         if not post_id:
             raise serializers.ValidationError({"post": "Post ID is required."})
-        
-        
         from posts.models import Post
         try:
             post_obj = Post.objects.get(pk=post_id)
         except Post.DoesNotExist:
             raise serializers.ValidationError({"post": "Post does not exist."})
-            
         validated_data['author'] = request.user
         validated_data['post'] = post_obj
-        
+
         return super().create(validated_data)
 
 
@@ -71,17 +65,19 @@ class FollowSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Follow
-        fields = '__all__'
+        fields = ('user', 'following')
         read_only_fields = ('user',)
 
     def validate_following(self, value):
         if value == self.context['request'].user:
-            raise serializers.ValidationError("Нельзя подписаться на самого себя")
-
+            raise serializers.ValidationError(
+                "Нельзя подписаться на самого себя")
         if Follow.objects.filter(
-            user=self.context['request'].user, 
-            following=value).exists():
-                raise serializers.ValidationError("Вы уже подписаны на этого пользователя")
+            user=self.context['request'].user,
+            following=value
+        ).exists():
+            raise serializers.ValidationError(
+                "Вы уже подписаны на этого пользователя")
         return value
 
     def create(self, validated_data):
